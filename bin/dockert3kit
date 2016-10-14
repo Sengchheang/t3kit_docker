@@ -1,0 +1,78 @@
+#!/bin/bash
+
+# Check if docker and docker-compose are installed
+command -v docker >/dev/null 2>&1 || { echo "docker is not installed. Aborting." >&2; exit 1; }
+command -v docker-compose >/dev/null 2>&1 || { echo "docker-compose is not installed. Aborting." >&2; exit 1; }
+
+package_dir="vendor/lauri/dockert3kit"
+config_dir="${package_dir}/config"
+export HOST_USER_ID="${UID}"
+
+action=$1
+
+# Generate project name from folder name
+projectname=${PWD##*/}
+projectname=`echo ${projectname// /_}`
+projectname=`echo ${projectname} | tr '[A-Z]' '[a-z]'`
+export PROJECT_NAME="${projectname}"
+
+# Wrap docker-compose command to use config from package
+wrapped_command="docker-compose -p \"${projectname}\" -f ${package_dir}/docker-compose.yml"
+
+# Use the projects folder name as servername
+DOCKER_TYPO3_SERVERNAME=${projectname}
+
+# Use Development context if Flow Context is not set
+DOCKER_TYPO3_CONTEXT=${TYPO3_CONTEXT:=Development}
+
+# Replace the markers in the merge config file
+sed -e "s/DOCKER_TYPO3_SERVERNAME/${DOCKER_TYPO3_SERVERNAME} *.${DOCKER_TYPO3_SERVERNAME}/g;s/DOCKER_TYPO3_CONTEXT/${DOCKER_TYPO3_CONTEXT}/g" ${config_dir}/web/nginx_default.conf > ${config_dir}/web/.nginx_default_merged.conf
+sed -e "s/DOCKER_TYPO3_SERVERNAME/test.${DOCKER_TYPO3_SERVERNAME}/g;s/DOCKER_TYPO3_CONTEXT/${DOCKER_TYPO3_CONTEXT}\/Testing/g" ${config_dir}/web/nginx_default.conf > ${config_dir}/web/.nginx_default_test_merged.conf
+
+# Make sure all entrypoint scripts are executable
+chmod +x ${package_dir}/scripts/entrypoint/*.sh
+
+# Create placeholder for storing web ip
+touch ${config_dir}/web/ip_address.txt
+
+# We need docker container for global dns resolver
+DNS_CONTAINER_NAME="docker-dns-resolver"
+DNS_CONTAINER_STATUS=$(docker inspect --format="{{ .State.Running }}" --type container ${DNS_CONTAINER_NAME} 2> /dev/null)
+# If dns container not exist yet, create it
+if [ $? -eq 1 ]; then
+	docker run -d --hostname resolvable --name ${DNS_CONTAINER_NAME} \
+	-v /var/run/docker.sock:/tmp/docker.sock -v /etc/resolv.conf:/tmp/resolv.conf \
+	mgood/resolvable \
+	>/dev/null 2>&1
+fi
+# If dns container exist but not running, start it
+if [ "${DNS_CONTAINER_STATUS}" == "false" ]; then
+	docker start ${DNS_CONTAINER_NAME} >/dev/null 2>&1
+fi
+
+echo "####"
+echo "### Project name    : ${projectname}"
+echo "### TYPO3_CONTEXT   : ${DOCKER_TYPO3_CONTEXT}"
+echo "### Testing context : ${DOCKER_TYPO3_CONTEXT}/Testing"
+echo "###"
+echo "### DockerT3kit is now running action '${action}'"
+echo "####"
+
+# Wrap docker-compose command to use config from package, passing TYPO3 context on run action
+if [ "$action" = "run" ]; then
+	${wrapped_command} $1 --rm -e TYPO3_CONTEXT=${DOCKER_TYPO3_CONTEXT} ${*:2}
+else
+	${wrapped_command} $*
+fi
+
+if [ "$action" = "up" ]; then
+	# Get ip address of web container, store in ip_address.txt file and send it to app container
+	${wrapped_command} run --rm -e PROJECT_NAME=${projectname} web /entrypoint.sh
+	${wrapped_command} run --rm app /entrypoint.sh
+
+	# Print information about running app container
+	echo "####"
+	echo "### Done! Your app is running here  : http://${projectname}/"
+	echo "### Testing context is running here : http://test.${projectname}/"
+	echo "####"
+fi

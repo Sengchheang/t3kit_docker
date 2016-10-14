@@ -1,0 +1,71 @@
+CHANGELOG
+=========
+2.2.1
+-----
+
+  - [IMP] Remove unnecessary containers
+
+2.2.0
+-----
+
+  - [TASK] Fork t3kit version
+
+2.1.0
+-----
+
+  - [FEATURE] Dynamic domain with local dns container
+
+2.0.4
+-----
+
+  - [TASK] Support for mac docker with volume ownership
+
+2.0.3
+-----
+
+  - [IMP] Fatal error: "Security" how to run mysqld as root!
+
+2.0.2
+-----
+
+  - [!!!TASK] Capitalize docroot to align with flow setup
+
+2.0.1
+-----
+
+  - [FEATURE] Add SSL support
+
+2.0.0
+-----
+
+  - [TASK] Use port 80 for web instead of 8080
+
+1.0.4
+-----
+
+  - [FEATURE] Add couchdb container
+
+1.0.3
+-----
+
+  - [IMP] Allow wildcard sub domain hostname
+
+1.0.2
+-----
+
+  - [IMP] Make one-off docker run container after exit
+
+1.0.1
+-----
+
+  - [TASK] Use image instead of local build
+  - [TASK] Enable apc cli
+
+1.0.0
+-----
+
+  - [TASK]    Generate locale setting for container
+  - [TASK]    Adjust for TYPO3 7.6
+  - [TASK]    Use image from dockerhub in compose config
+  - [FEATURE] Add config for php optimization
+  - [TASK]    Initial commit

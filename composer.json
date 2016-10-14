@@ -1,0 +1,19 @@
+{
+  "name": "lauri/dockert3kit",
+  "description": "Docker Compose structure to quickly startup t3kit based TYPO3 CMS projects",
+  "license": "MIT",
+  "require": {
+    "typo3/cms": "*"
+  },
+  "authors": [
+    {
+      "name": "Lauri Saarni",
+      "email": "lauri@web-essentials.asia",
+      "homepage": "http://www.web-essentials.asia",
+      "role": "Developer"
+    }
+  ],
+  "bin": [
+    "bin/dockert3kit"
+  ]
+}
